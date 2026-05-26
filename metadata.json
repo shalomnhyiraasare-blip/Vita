@@ -1,0 +1,6 @@
+{
+  "name": "VitaData",
+  "description": "Real-time community-driven analytics and early-warning alert platform to monitor poverty, food security, health, and education risk indicators.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

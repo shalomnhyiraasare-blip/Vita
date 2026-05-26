@@ -1,0 +1,86 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "A user profile storing identities, roles, and verified status.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Authenticating user identifier" },
+        "email": { "type": "string", "format": "email", "description": "User email address" },
+        "name": { "type": "string", "description": "Full name of the user" },
+        "role": { "type": "string", "enum": ["admin", "analyst", "contributor"], "description": "Access control role" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "A field report capturing community status or incidents.",
+      "type": "object",
+      "properties": {
+        "reportId": { "type": "string", "description": "Unique identifier of the report" },
+        "location": { "type": "string", "description": "Human readable area designation" },
+        "latitude": { "type": "number", "description": "GPS latitude" },
+        "longitude": { "type": "number", "description": "GPS longitude" },
+        "incidentType": { "type": "string", "description": "Category of incident (e.g., Violence, Theft, Vandalism, Suspicious)" },
+        "severity": { "type": "string", "enum": ["Critical", "High", "Medium", "Low"], "description": "Severity tier" },
+        "description": { "type": "string", "description": "Plain description text of field occurrences" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Submission date-time" },
+        "submittedBy": { "type": "string", "description": "UID of the user who submitted it" },
+        "verifiedByAI": { "type": "boolean", "description": "Whether report was evaluated and verified by AI model" },
+        "aiAnalysis": { "type": "string", "description": "Auto-generated safety risk categorization review metadata" }
+      },
+      "required": ["reportId", "location", "incidentType", "severity", "description", "createdAt", "submittedBy", "verifiedByAI"]
+    },
+    "Alert": {
+      "title": "Alert",
+      "description": "An automated system warning for high or critical area risk threshold breaches.",
+      "type": "object",
+      "properties": {
+        "alertId": { "type": "string", "description": "Unique identifier of the alert" },
+        "areaName": { "type": "string", "description": "Name of the target risk municipality or village" },
+        "incidentType": { "type": "string", "description": "High level category (e.g. food insecurity, health, security)" },
+        "severity": { "type": "string", "enum": ["Critical", "High", "Medium", "Low"], "description": "Urgency tier" },
+        "description": { "type": "string", "description": "Synthesized early warning alert explanation text" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Epoch timestamp" },
+        "score": { "type": "number", "description": "Intensity value" },
+        "status": { "type": "string", "enum": ["active", "acknowledged", "resolved"], "description": "Current status" }
+      },
+      "required": ["alertId", "areaName", "incidentType", "severity", "description", "createdAt", "score", "status"]
+    },
+    "HistoricalRisk": {
+      "title": "HistoricalRisk",
+      "description": "Time-series daily records of poverty index attributes across monitored wards.",
+      "type": "object",
+      "properties": {
+        "riskId": { "type": "string", "description": "Combined date and area identifier" },
+        "areaName": { "type": "string", "description": "Monitored community reference" },
+        "date": { "type": "string", "format": "date", "description": "ISO date representation" },
+        "foodSecurity": { "type": "number", "description": "Poverty index component" },
+        "health": { "type": "number", "description": "Health emergency index component" },
+        "education": { "type": "number", "description": "School dropout risk indicator score" },
+        "income": { "type": "number", "description": "Income shock vulnerability tracker score" },
+        "overallRisk": { "type": "number", "description": "Aggregated normalized score (0-100)" }
+      },
+      "required": ["riskId", "areaName", "date", "foodSecurity", "health", "education", "income", "overallRisk"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile records containing roles and emails."
+    },
+    "reports/{reportId}": {
+      "schema": "Report",
+      "description": "Submitted community reports with geolocation and severity."
+    },
+    "alerts/{alertId}": {
+      "schema": "Alert",
+      "description": "Active and resolved system alerts triggered by critical risk indexes."
+    },
+    "historicalRisks/{riskId}": {
+      "schema": "HistoricalRisk",
+      "description": "Time-series daily historical poverty risk indices for charting."
+    }
+  }
+}

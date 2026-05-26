@@ -1,0 +1,139 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net (default-deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- REUSABLE SECURITY UTILITIES / PRIMITIVES ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Role-based lookup from users collections
+    function isAdmin() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+
+    function isAnalyst() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "analyst" || 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin");
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- SCHEMAS VALIDATION FUNCTIONS ---
+    
+    function isValidUserProfile(data) {
+      return data.uid is string && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() <= 256 &&
+             data.role is string && (data.role == "admin" || data.role == "analyst" || data.role == "contributor") &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidReport(data) {
+      return data.reportId is string && data.reportId.size() <= 128 &&
+             data.location is string && data.location.size() <= 256 &&
+             data.latitude is number &&
+             data.longitude is number &&
+             data.incidentType is string && data.incidentType.size() <= 128 &&
+             data.severity is string && (data.severity == "Critical" || data.severity == "High" || data.severity == "Medium" || data.severity == "Low") &&
+             data.description is string && data.description.size() <= 1000 &&
+             data.createdAt is timestamp &&
+             data.submittedBy == request.auth.uid &&
+             data.verifiedByAI is bool &&
+             data.aiAnalysis is string && data.aiAnalysis.size() <= 2000;
+    }
+
+    function isValidAlert(data) {
+      return data.alertId is string && data.alertId.size() <= 128 &&
+             data.areaName is string && data.areaName.size() <= 256 &&
+             data.incidentType is string && data.incidentType.size() <= 128 &&
+             data.severity is string && (data.severity == "Critical" || data.severity == "High" || data.severity == "Medium" || data.severity == "Low") &&
+             data.description is string && data.description.size() <= 1000 &&
+             data.createdAt is timestamp &&
+             data.score is number && data.score >= 0 && data.score <= 100 &&
+             data.status is string && (data.status == "active" || data.status == "acknowledged" || data.status == "resolved");
+    }
+
+    function isValidHistoricalRisk(data) {
+      return data.riskId is string && data.riskId.size() <= 128 &&
+             data.areaName is string && data.areaName.size() <= 256 &&
+             data.date is string && data.date.size() <= 32 &&
+             data.foodSecurity is number && data.foodSecurity >= 0 && data.foodSecurity <= 100 &&
+             data.health is number && data.health >= 0 && data.health <= 100 &&
+             data.education is number && data.education >= 0 && data.education <= 100 &&
+             data.income is number && data.income >= 0 && data.income <= 100 &&
+             data.overallRisk is number && data.overallRisk >= 0 && data.overallRisk <= 100;
+    }
+
+    // --- CORES MATCH RULES BLOCK ---
+
+    // USERS COLLECTION
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      
+      // Allow user creation by authenticated users for their own IDs, preventing role escalation or editing fields
+      allow create: if isOwner(userId) && isValidUserProfile(incoming()) && incoming().role == "contributor";
+      allow update: if isOwner(userId) && isValidUserProfile(incoming()) && 
+                    incoming().role == existing().role && 
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().uid == existing().uid;
+      allow delete: if isAdmin();
+    }
+
+    // REPORTS COLLECTION
+    match /reports/{reportId} {
+      // Analysts and Admins can view all reports; Contributors scan only their own reports or view summarized analytics
+      allow get: if isAnalyst() || (isSignedIn() && existing().submittedBy == request.auth.uid);
+      allow list: if isAnalyst() || (isSignedIn() && resource.data.submittedBy == request.auth.uid);
+      
+      // Permit creation by any logged-in contributor, ensuring validity helper checks values
+      allow create: if isSignedIn() && isValidReport(incoming()) && incoming().createdAt == request.time;
+      
+      // Admins and Analysts edit reports (review or AI audit correction actions)
+      allow update: if isAnalyst() && isValidReport(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isAdmin();
+    }
+
+    // ALERTS COLLECTION
+    match /alerts/{alertId} {
+      allow get, list: if isSignedIn();
+      allow create: if isAnalyst() && isValidAlert(incoming()) && incoming().createdAt == request.time;
+      
+      // Update checks transition and locks terminal states
+      allow update: if (isAnalyst() && isValidAlert(incoming()) && 
+                    existing().status != "resolved" && (
+                    incoming().diff(existing()).affectedKeys().hasOnly(['status', 'description'])
+                    )) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // HISTORICAL RISKS COLLECTION
+    match /historicalRisks/{riskId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}
