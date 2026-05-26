@@ -1,0 +1,96 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Space Grotesk", sans-serif;
+  
+  --color-gray-150: #f1f5f9;
+  --color-gray-650: #4B5563;
+  --color-gray-720: #374151;
+  --color-gray-750: #374151;
+  --color-gray-850: #1E293B;
+  --color-gray-950: #0b0f19;
+  
+  --color-orange-350: #FDBA74;
+  --color-orange-550: #F97316;
+  --color-orange-605: #EA5800;
+  --color-orange-650: #EA580C;
+  
+  --color-pink-905: #9D174D;
+  --color-pink-750: #BE185D;
+  
+  --color-green-650: #16A34A;
+  --color-red-650: #DC2626;
+}
+
+/* Base custom styles to ensure premium styling */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+/* Custom dark mode utilities */
+.dark body {
+  background-color: #0c111d;
+  color: #f3f4f6;
+  --color-gray-650: #9ca3af;
+  --color-gray-720: #d1d5db;
+  --color-gray-750: #e5e7eb;
+  --color-gray-150: #1e293b;
+  --color-gray-850: #334155;
+}
+
+/* Webkit Scrollbars Customization */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.5);
+}
+
+/* Skeleton animation shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.dark .animate-shimmer {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
